@@ -1,47 +1,44 @@
 import { Suspense } from "react";
-import { fetchCharacters } from "@/hooks/use-characters";
 import { FilterSection } from "@/components/filter-section";
 import { CharacterGrid } from "@/components/character-grid";
-import { Pagination } from "@/components/pagination";
 import { QueryParams } from "@/lib/types";
+import { parseAsString } from "nuqs/server";
+import {
+  HydrationBoundary,
+  QueryClient,
+  dehydrate,
+} from "@tanstack/react-query";
+import { fetchCharacters } from "@/hooks/use-characters";
 
 export default async function Home({
   searchParams,
 }: {
   searchParams: { [key: string]: string | string[] | undefined };
 }) {
-  const resolvedSearchParams = await Promise.resolve(searchParams);
+  const params = await Promise.resolve(searchParams);
+  const queryClient = new QueryClient();
 
-  // URL query parametrelerini prepare et
+  const status = parseAsString.withDefault("").parseServerSide(params.status);
+  const gender = parseAsString.withDefault("").parseServerSide(params.gender);
+  const page = parseAsString.withDefault("1").parseServerSide(params.page);
+
   const queryParams: QueryParams = {
-    status:
-      typeof resolvedSearchParams.status === "string"
-        ? resolvedSearchParams.status
-        : undefined,
-    gender:
-      typeof resolvedSearchParams.gender === "string"
-        ? resolvedSearchParams.gender
-        : undefined,
-    page:
-      typeof resolvedSearchParams.page === "string"
-        ? resolvedSearchParams.page
-        : "1",
+    status: status || undefined,
+    gender: gender || undefined,
+    page: page,
   };
 
-  // SSR ile veri çekme
-  const data = await fetchCharacters(queryParams);
+  await queryClient.prefetchQuery({
+    queryKey: ["characters", queryParams],
+    queryFn: () => fetchCharacters(queryParams),
+  });
 
   return (
-    <>
-      <Suspense fallback={<div>Loading filters...</div>}>
-        <FilterSection />
-      </Suspense>
-
+    <HydrationBoundary state={dehydrate(queryClient)}>
+      <FilterSection />
       <div>
-        <CharacterGrid data={data} isLoading={false} isError={false} />
-
-        <Pagination info={data.info} />
+        <CharacterGrid queryParams={queryParams} />
       </div>
-    </>
+    </HydrationBoundary>
   );
 }

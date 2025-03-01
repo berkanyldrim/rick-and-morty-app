@@ -1,28 +1,19 @@
-import { useQuery } from "@tanstack/react-query";
-import axios from "axios";
-import { ApiResponse, QueryParams } from "@/lib/types";
-import { CHARACTERS_ENDPOINT } from "@/lib/constants";
+import { QueryParams } from "@/lib/types";
 
-export const fetchCharacters = async (
-  queryParams: QueryParams
-): Promise<ApiResponse> => {
-  // Query parametrelerinden sorgu stringi oluştur
-  const queryString = Object.entries(queryParams)
-    .filter(([key, value]) => value !== undefined && value !== "")
-    .map(([key, value]) => `${key}=${encodeURIComponent(value as string)}`)
-    .join("&");
+export async function fetchCharacters(params: QueryParams) {
+  const searchParams = new URLSearchParams();
 
-  const response = await axios.get<ApiResponse>(
-    `${CHARACTERS_ENDPOINT}${queryString ? `?${queryString}` : ""}`
+  if (params.status) searchParams.append("status", params.status);
+  if (params.gender) searchParams.append("gender", params.gender);
+  if (params.page) searchParams.append("page", params.page);
+
+  const response = await fetch(
+    `https://rickandmortyapi.com/api/character?${searchParams.toString()}`
   );
 
-  return response.data;
-};
+  if (!response.ok) {
+    throw new Error("Network response was not ok");
+  }
 
-export const useCharacters = (queryParams: QueryParams) => {
-  return useQuery({
-    queryKey: ["characters", queryParams],
-    queryFn: () => fetchCharacters(queryParams),
-    staleTime: 1000 * 60 * 5,
-  });
-};
+  return response.json();
+}
