@@ -1,11 +1,14 @@
 import { Suspense } from "react";
-import { fetchCharacters } from "@/hooks/use-characters";
 import { FilterSection } from "@/components/filter-section";
 import { CharacterGrid } from "@/components/character-grid";
-import { Pagination } from "@/components/pagination";
 import { QueryParams } from "@/lib/types";
 import { parseAsString } from "nuqs/server";
-import type { SearchParams } from "nuqs/server";
+import {
+  HydrationBoundary,
+  QueryClient,
+  dehydrate,
+} from "@tanstack/react-query";
+import { fetchCharacters } from "@/hooks/use-characters";
 
 export default async function Home({
   searchParams,
@@ -13,6 +16,7 @@ export default async function Home({
   searchParams: { [key: string]: string | string[] | undefined };
 }) {
   const params = await Promise.resolve(searchParams);
+  const queryClient = new QueryClient();
 
   const status = parseAsString.withDefault("").parseServerSide(params.status);
   const gender = parseAsString.withDefault("").parseServerSide(params.gender);
@@ -24,19 +28,17 @@ export default async function Home({
     page: page,
   };
 
-  const data = await fetchCharacters(queryParams);
+  await queryClient.prefetchQuery({
+    queryKey: ["characters", queryParams],
+    queryFn: () => fetchCharacters(queryParams),
+  });
 
   return (
-    <>
-      <Suspense fallback={<div>Loading filters...</div>}>
-        <FilterSection />
-      </Suspense>
-
+    <HydrationBoundary state={dehydrate(queryClient)}>
+      <FilterSection />
       <div>
-        <CharacterGrid data={data} isLoading={false} isError={false} />
-
-        <Pagination info={data.info} />
+        <CharacterGrid queryParams={queryParams} />
       </div>
-    </>
+    </HydrationBoundary>
   );
 }

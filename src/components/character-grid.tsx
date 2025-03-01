@@ -1,53 +1,34 @@
-import React from "react";
+"use client";
+
+import { useQuery } from "@tanstack/react-query";
+import { fetchCharacters } from "@/hooks/use-characters";
+import { QueryParams } from "@/lib/types";
 import { CharacterCard } from "@/components/character-card";
-import { ApiResponse } from "@/lib/types";
+import { Pagination } from "@/components/pagination";
+import type { Character } from "@/lib/types";
 
 interface CharacterGridProps {
-  data: ApiResponse;
-  isLoading: boolean;
-  isError: boolean;
+  queryParams: QueryParams;
 }
 
-export function CharacterGrid({
-  data,
-  isLoading,
-  isError,
-}: CharacterGridProps) {
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center min-h-[400px]">
-        <div className="animate-spin h-12 w-12 border-4 border-blue-500 rounded-full border-t-transparent"></div>
-      </div>
-    );
-  }
+export function CharacterGrid({ queryParams }: CharacterGridProps) {
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["characters", queryParams],
+    queryFn: () => fetchCharacters(queryParams),
+  });
 
-  if (isError) {
-    return (
-      <div className="text-center p-10">
-        <h3 className="text-xl font-bold text-red-500">
-          Error loading characters
-        </h3>
-        <p className="mt-2">Please try again later or adjust your filters.</p>
-      </div>
-    );
-  }
-
-  if (data.results.length === 0) {
-    return (
-      <div className="text-center p-10">
-        <h3 className="text-xl font-bold">No characters found</h3>
-        <p className="mt-2">
-          Try adjusting your filters to see more characters.
-        </p>
-      </div>
-    );
-  }
+  if (isLoading) return <div>Loading...</div>;
+  if (isError) return <div>Error fetching data</div>;
+  if (!data) return null;
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-      {data.results.map((character) => (
-        <CharacterCard key={character.id} character={character} />
-      ))}
-    </div>
+    <>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {data.results.map((character: Character) => (
+          <CharacterCard key={character.id} character={character} />
+        ))}
+      </div>
+      {data.info && <Pagination info={data.info} />}
+    </>
   );
 }
