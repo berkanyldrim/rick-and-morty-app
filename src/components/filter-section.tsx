@@ -1,6 +1,5 @@
 "use client";
 import React, { useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
 import {
   Select,
   SelectContent,
@@ -9,36 +8,27 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { useFilterStore } from "@/store/filter-store";
 import { STATUS_OPTIONS, GENDER_OPTIONS } from "@/lib/constants";
-import { FilterState } from "@/lib/types";
+import { useQueryStates, parseAsString } from "nuqs";
 
 export function FilterSection() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const { status, gender, setStatus, setGender, resetFilters } =
-    useFilterStore();
-
-  useEffect(() => {
-    const statusParam = searchParams.get("status") as FilterState["status"];
-    const genderParam = searchParams.get("gender") as FilterState["gender"];
-
-    if (statusParam) setStatus(statusParam);
-    if (genderParam) setGender(genderParam);
-  }, [searchParams, setStatus, setGender]);
-
-  const applyFilters = () => {
-    const params = new URLSearchParams();
-
-    if (status && status !== "all") params.set("status", status);
-    if (gender && gender !== "all") params.set("gender", gender);
-
-    router.push(`?${params.toString()}`);
-  };
+  const [query, setQuery] = useQueryStates(
+    {
+      status: parseAsString.withDefault(""),
+      gender: parseAsString.withDefault(""),
+      page: parseAsString.withDefault("1"),
+    },
+    {
+      shallow: false,
+    }
+  );
 
   const handleResetFilters = () => {
-    resetFilters();
-    router.push("/");
+    setQuery({
+      status: "",
+      gender: "",
+      page: "1",
+    });
   };
 
   return (
@@ -48,8 +38,8 @@ export function FilterSection() {
         <div className="space-y-2">
           <label className="text-sm font-medium">Status:</label>
           <Select
-            value={status}
-            onValueChange={(value) => setStatus(value as FilterState["status"])}
+            value={query.status}
+            onValueChange={(value) => setQuery({ status: value, page: "1" })}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select status" />
@@ -70,8 +60,8 @@ export function FilterSection() {
         <div className="space-y-2">
           <label className="text-sm font-medium">Gender:</label>
           <Select
-            value={gender}
-            onValueChange={(value) => setGender(value as FilterState["gender"])}
+            value={query.gender}
+            onValueChange={(value) => setQuery({ gender: value, page: "1" })}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select gender" />
@@ -94,7 +84,7 @@ export function FilterSection() {
         <Button variant="outline" onClick={handleResetFilters}>
           Reset Filters
         </Button>
-        <Button onClick={applyFilters}>Apply Filters</Button>
+        {/* <Button onClick={applyFilters}>Apply Filters</Button> */}
       </div>
     </div>
   );

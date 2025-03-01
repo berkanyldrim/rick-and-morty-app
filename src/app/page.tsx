@@ -4,31 +4,26 @@ import { FilterSection } from "@/components/filter-section";
 import { CharacterGrid } from "@/components/character-grid";
 import { Pagination } from "@/components/pagination";
 import { QueryParams } from "@/lib/types";
+import { parseAsString } from "nuqs/server";
+import type { SearchParams } from "nuqs/server";
 
 export default async function Home({
   searchParams,
 }: {
   searchParams: { [key: string]: string | string[] | undefined };
 }) {
-  const resolvedSearchParams = await Promise.resolve(searchParams);
+  const params = await Promise.resolve(searchParams);
 
-  // URL query parametrelerini prepare et
+  const status = parseAsString.withDefault("").parseServerSide(params.status);
+  const gender = parseAsString.withDefault("").parseServerSide(params.gender);
+  const page = parseAsString.withDefault("1").parseServerSide(params.page);
+
   const queryParams: QueryParams = {
-    status:
-      typeof resolvedSearchParams.status === "string"
-        ? resolvedSearchParams.status
-        : undefined,
-    gender:
-      typeof resolvedSearchParams.gender === "string"
-        ? resolvedSearchParams.gender
-        : undefined,
-    page:
-      typeof resolvedSearchParams.page === "string"
-        ? resolvedSearchParams.page
-        : "1",
+    status: status || undefined,
+    gender: gender || undefined,
+    page: page,
   };
 
-  // SSR ile veri çekme
   const data = await fetchCharacters(queryParams);
 
   return (
